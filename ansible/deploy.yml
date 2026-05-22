@@ -48,6 +48,11 @@
         path: /home/ec2-user/ecommerce-devops
         state: absent
 
+    - name: Recreate deployment directory
+      file:
+        path: /home/ec2-user/ecommerce-devops
+        state: directory
+
     - name: Extract deployment archive on target
       unarchive:
         src: /tmp/ecommerce-devops.tar.gz
