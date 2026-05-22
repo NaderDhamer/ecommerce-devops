@@ -1,0 +1,76 @@
+- name: Deploy current ecommerce-devops project
+  hosts: web
+  become: true
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  tasks:
+    - name: Update system packages
+      yum:
+        name: '*'
+        state: latest
+
+    - name: Install Docker
+      yum:
+        name: docker
+        state: present
+
+    - name: Start and enable Docker
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Install Docker Compose
+      get_url:
+        url: https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64
+        dest: /usr/local/bin/docker-compose
+        mode: '0755'
+
+    - name: Create deployment directory
+      file:
+        path: /home/ec2-user/ecommerce-devops
+        state: directory
+
+    - name: Create deployment archive on controller
+      shell: |
+        tar -czf /tmp/ecommerce-devops.tar.gz -C "{{ playbook_dir }}/.." .
+      delegate_to: localhost
+      run_once: true
+      become: false
+
+    - name: Copy deployment archive to target
+      copy:
+        src: /tmp/ecommerce-devops.tar.gz
+        dest: /tmp/ecommerce-devops.tar.gz
+
+    - name: Remove existing deployment directory
+      file:
+        path: /home/ec2-user/ecommerce-devops
+        state: absent
+
+    - name: Extract deployment archive on target
+      unarchive:
+        src: /tmp/ecommerce-devops.tar.gz
+        dest: /home/ec2-user/ecommerce-devops
+        remote_src: true
+
+    - name: Verify compose file exists
+      stat:
+        path: /home/ec2-user/ecommerce-devops/docker-compose.yml
+      register: compose_file
+
+    - name: Fail if compose file is missing
+      fail:
+        msg: "docker-compose.yml was not found at /home/ec2-user/ecommerce-devops/docker-compose.yml"
+      when: not compose_file.stat.exists
+
+    - name: Stop containers (force redeploy)
+      shell: /usr/local/bin/docker-compose down
+      args:
+        chdir: /home/ec2-user/ecommerce-devops
+      ignore_errors: yes
+
+    - name: Start containers
+      shell: /usr/local/bin/docker-compose up -d --build
+      args:
+        chdir: /home/ec2-user/ecommerce-devops
