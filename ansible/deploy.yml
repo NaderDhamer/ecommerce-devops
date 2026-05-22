@@ -79,3 +79,8 @@
       shell: /usr/local/bin/docker-compose up -d --build
       args:
         chdir: /home/ec2-user/ecommerce-devops
+
+    - name: Seed default products
+      shell: /usr/local/bin/docker-compose exec -T backend npm run seed
+      args:
+        chdir: /home/ec2-user/ecommerce-devops
