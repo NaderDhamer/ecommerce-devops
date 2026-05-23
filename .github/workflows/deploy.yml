@@ -34,7 +34,9 @@ jobs:
 
             cd ~/ecommerce-devops
 
-            git pull origin main
+            git fetch origin
+
+            git reset --hard origin/main
 
             docker compose down
 
